@@ -13,11 +13,11 @@ def get_crypto_data(symbols, start_date, end_date):
     for symbol in symbols:
         try:
             crypto_ticker = yf.Ticker(symbol)
-            data = crypto_ticker.history(start=start_date, end=end_date)['Close']
+            data = crypto_ticker.history(period='1d')  # Retrieve only the most recent data
             if not data.empty:
-                crypto_data[symbol] = data
+                crypto_data[symbol] = data['Close']
             else:
-                print(f"No data available for {symbol} in the specified date range.")
+                print(f"No data available for {symbol}.")
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
     return crypto_data
@@ -88,14 +88,18 @@ if __name__ == "__main__":
 
     crypto_data['Tendance'] = crypto_data.apply(estimate_trend, axis=1)
 
+
+
     # Estimer la tendance future pour les jours à venir
-    future_dates = pd.date_range(pd.to_datetime(end_date), pd.to_datetime(end_date) + timedelta(days=5))  # Définir le nombre de jours à prévoir
+    future_dates = pd.date_range(pd.to_datetime(end_date), pd.to_datetime(end_date) + timedelta(days=5))
     future_data = pd.DataFrame(index=future_dates, columns=crypto_symbols)
 
     for crypto in crypto_symbols:
         if crypto in crypto_data.columns:
             # Utiliser la tendance actuelle pour estimer la tendance future
-            future_data[crypto] = future_data.apply(lambda row: estimate_future_trend(row, future_data), axis=1)
+            last_historical_value = crypto_data[crypto].iloc[-1]  # Get the last historical value
+            future_data[crypto] = estimate_future_trend(crypto_data.loc[crypto_data.index[-1]], future_data)
+
 
     print("Crypto-monnaies classées par ordre croissant de rendement moyen quotidien :")
     print(sorted_cryptos)
